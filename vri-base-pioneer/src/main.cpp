@@ -163,7 +163,7 @@ int main(int argc, char **argv) {
 		ufr_put(&pub_sonar, "\n");
 		
 		// wait for changes of velocity of motors
-		if ( lt_recv_async(&sub_motors) ) {
+		if ( ufr_recv_async(&sub_motors) ) {
 			int vel=0, rotvel=0;
 			lt_get(&sub_motors, "ii", &vel, &rotvel);
 			printf("set motors: %d %d\n", vel, rotvel);
