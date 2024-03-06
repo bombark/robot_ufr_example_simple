@@ -102,16 +102,16 @@ int start_lidar() {
 
 int main(int argc, char **argv) {
 
-	link_t pub_lidar = ufr_sys_open("lidar", "@new zmq:topic @host 192.168.43.141 @port 5002 @coder msgpack:obj");
+	link_t pub_lidar = ufr_sys_open("lidar", "@new zmq:topic @host 192.168.43.141 @port 5002 @coder msgpack");
     lt_start_publisher(&pub_lidar, NULL);
 
-    link_t sub_motors = ufr_sys_open("motor", "@new zmq:topic @host 192.168.43.128 @port 5003 @coder msgpack:obj");
+    link_t sub_motors = ufr_sys_open("motor", "@new zmq:topic @host 192.168.43.128 @port 5003 @coder msgpack");
     lt_start_subscriber(&sub_motors, NULL);
 
-    link_t pub_encoder = ufr_sys_open("encoder", "@new zmq:topic @host 192.168.43.141 @port 5004 @coder msgpack:obj");
+    link_t pub_encoder = ufr_sys_open("encoder", "@new zmq:topic @host 192.168.43.141 @port 5004 @coder msgpack");
     lt_start_publisher(&pub_encoder, NULL);
 
-	link_t pub_sonar = ufr_sys_open("sonar", "@new zmq:topic @host 192.168.43.141 @port 5005 @coder msgpack:obj");
+	link_t pub_sonar = ufr_sys_open("sonar", "@new zmq:topic @host 192.168.43.141 @port 5005 @coder msgpack");
     lt_start_publisher(&pub_sonar, NULL);
 
 
@@ -147,20 +147,20 @@ int main(int argc, char **argv) {
 	robot.addRangeDevice(&sonar);
 	int numSonar = robot.getNumSonar();
 
-	start_lidar();
+	// start_lidar();
 
 	while(1) {
 		// read robot position
 		ArPose pose = robot.getPose();
-		lt_put(&pub_encoder, "fff\n", pose.getX(), pose.getY(), pose.getTh());
+		ufr_put(&pub_encoder, "fff\n", pose.getX(), pose.getY(), pose.getTh());
 
 		// read sonars
 		ArSensorReading* sonarReading;
 		for (int i=0; i < numSonar; i++){
 			sonarReading = robot.getSonarReading(i);
-			lt_put(&pub_sonar, "i", sonarReading->getRange());
+			ufr_put(&pub_sonar, "i", sonarReading->getRange());
 		}
-		lt_put(&pub_sonar, "\n");
+		ufr_put(&pub_sonar, "\n");
 		
 		// wait for changes of velocity of motors
 		if ( lt_recv_async(&sub_motors) ) {
@@ -183,10 +183,10 @@ int main(int argc, char **argv) {
 		}
 
 		// send lidar data
+		/*
 		static sl_lidar_response_measurement_node_hq_t nodes[8192];
 		size_t   nodes_size = _countof(nodes);
 		sl_result op_result = g_lidar_drv->grabScanDataHq(nodes, nodes_size);
-
 		if (SL_IS_OK(op_result)) {
 			g_lidar_drv->ascendScanData(nodes, nodes_size);
 			for (int pos = 0; pos < (int)nodes_size ; ++pos) {
@@ -212,8 +212,9 @@ int main(int argc, char **argv) {
 				}
 			}
 
-			lt_put(&pub_lidar, "af\n", 360, values);
+			ufr_put(&pub_lidar, "af\n", 360, values);
 		}
+		*/
 
 		// wait 50ms
 		usleep(50000);
