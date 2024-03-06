@@ -99,27 +99,11 @@ int start_lidar() {
 	g_lidar_drv->startScan(0,1);
 }
 
-
-int main(int argc, char **argv) {
-
-	link_t pub_lidar = ufr_sys_open("lidar", "@new zmq:topic @host 192.168.43.141 @port 5002 @coder msgpack");
-    lt_start_publisher(&pub_lidar, NULL);
-
-    link_t sub_motors = ufr_sys_open("motor", "@new zmq:topic @host 192.168.43.128 @port 5003 @coder msgpack");
-    lt_start_subscriber(&sub_motors, NULL);
-
-    link_t pub_encoder = ufr_sys_open("encoder", "@new zmq:topic @host 192.168.43.141 @port 5004 @coder msgpack");
-    lt_start_publisher(&pub_encoder, NULL);
-
-	link_t pub_sonar = ufr_sys_open("sonar", "@new zmq:topic @host 192.168.43.141 @port 5005 @coder msgpack");
-    lt_start_publisher(&pub_sonar, NULL);
-
-
-	int aria_argc = 3;
-	char* aria_argv[] = {"aria", "-robotPort", PIONEER_SERIAL};
-
+int start_aria(ArRobot* robot) {
     Aria::init();
-	ArRobot robot;
+
+	static int aria_argc = 3;
+	static char* aria_argv[] = {"aria", "-robotPort", PIONEER_SERIAL};
 	ArArgumentParser parser(&aria_argc, aria_argv);
 	ArSimpleConnector connector(&parser);
 
@@ -137,18 +121,27 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 
-	robot.runAsync(true);
-	robot.lock();
-	robot.comInt(ArCommands::ENABLE, 1);
-	robot.unlock();
+	robot->runAsync(true);
+	robot->lock();
+	robot->comInt(ArCommands::ENABLE, 1);
+	robot->unlock();
 
 
 	ArSonarDevice sonar;
-	robot.addRangeDevice(&sonar);
-	int numSonar = robot.getNumSonar();
+	robot->addRangeDevice(&sonar);
+	int numSonar = robot->getNumSonar();
+}
 
+int main(int argc, char **argv) {
+	link_t pub_lidar = ufr_sys_publisher("lidar", "@new zmq:topic @host 192.168.43.141 @port 5002 @coder msgpack");
+    link_t sub_motors = ufr_sys_subscriber("motor", "@new zmq:topic @host 192.168.43.128 @port 5003 @coder msgpack");
+    link_t pub_encoder = ufr_sys_publisher("encoder", "@new zmq:topic @host 192.168.43.141 @port 5004 @coder msgpack");
+    link_t pub_sonar = ufr_sys_publisher("sonar", "@new zmq:topic @host 192.168.43.141 @port 5005 @coder msgpack");
+
+	ArRobot robot;
+	start_aria(&robot);
 	// start_lidar();
-
+	
 	while(1) {
 		// read robot position
 		ArPose pose = robot.getPose();
@@ -165,7 +158,7 @@ int main(int argc, char **argv) {
 		// wait for changes of velocity of motors
 		if ( ufr_recv_async(&sub_motors) ) {
 			int vel=0, rotvel=0;
-			lt_get(&sub_motors, "ii", &vel, &rotvel);
+			ufr_get(&sub_motors, "ii", &vel, &rotvel);
 			printf("set motors: %d %d\n", vel, rotvel);
 
 			robot.lock();
